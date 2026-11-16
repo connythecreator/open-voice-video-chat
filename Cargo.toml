@@ -26,7 +26,6 @@ version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/connythecreator/open-voice-video-chat"
-homepage = "https://github.com/connythecreator/open-voice-video-chat"
 # The locked egui 0.37 and eframe 0.37 stack requires rustc 1.95, so that is
 # the real floor for the workspace, not the 1.85 floor of edition 2024.
 rust-version = "1.95"

@@ -58,12 +58,6 @@ pub enum DetailLevel {
 }
 
 impl DetailLevel {
-    pub const ALL: [DetailLevel; 3] = [
-        DetailLevel::Simple,
-        DetailLevel::Advanced,
-        DetailLevel::Expert,
-    ];
-
     pub const fn label(self) -> &'static str {
         match self {
             DetailLevel::Simple => "simple",
@@ -3457,19 +3451,6 @@ fn presence_from_name(name: &str) -> Option<PresenceStatus> {
     }
 }
 
-fn presence_name(status: PresenceStatus) -> &'static str {
-    match status {
-        PresenceStatus::Online => "online",
-        PresenceStatus::Away => "away",
-        PresenceStatus::DoNotDisturb => "dnd",
-        PresenceStatus::Offline => "offline",
-    }
-}
-
-fn on_off(value: bool) -> &'static str {
-    if value { "on" } else { "off" }
-}
-
 /// The policy overlay body: one row per axis with the raised marker.
 fn policy_lines(view: &PolicyView) -> Vec<String> {
     let guild = &view.guild;
@@ -3581,10 +3562,6 @@ fn toggle_id<T: PartialEq + Copy>(list: &mut Vec<T>, id: T, mute: bool) {
     } else {
         list.retain(|item| *item != id);
     }
-}
-
-fn format_minute(minute: u16) -> String {
-    format!("{:02}:{:02}", minute / 60, minute % 60)
 }
 
 fn parse_minute(text: &str) -> Option<u16> {

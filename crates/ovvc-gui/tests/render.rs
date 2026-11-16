@@ -545,7 +545,7 @@ fn visible_texts(harness: &egui_kittest::Harness<'_, AppState>) -> Vec<String> {
 
 #[test]
 fn the_current_user_card_owns_identity_and_the_members_toggle() {
-    use egui_kittest::kittest::{NodeT, Queryable};
+    use egui_kittest::kittest::Queryable;
 
     let mut harness = harness_with(populated_state(), [1180.0, 760.0]);
     harness.run();
@@ -572,7 +572,7 @@ fn the_current_user_card_owns_identity_and_the_members_toggle() {
 
 #[test]
 fn the_global_detail_slider_changes_the_level() {
-    use egui_kittest::kittest::{NodeT, Queryable};
+    use egui_kittest::kittest::Queryable;
 
     let mut state = populated_state();
     state.screen = ScreenView::Settings;

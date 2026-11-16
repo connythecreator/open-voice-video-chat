@@ -4,6 +4,7 @@ description = "Daemon-attached client shared by the ovvc frontends"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 readme.workspace = true
 keywords.workspace = true

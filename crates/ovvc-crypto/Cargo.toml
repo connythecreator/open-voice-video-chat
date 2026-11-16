@@ -4,6 +4,7 @@ description = "Per-call X25519 key agreement and ChaCha20-Poly1305 media encrypt
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 readme.workspace = true
 keywords.workspace = true
