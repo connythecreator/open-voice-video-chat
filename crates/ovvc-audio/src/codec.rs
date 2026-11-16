@@ -14,11 +14,13 @@
 //! check. A packet whose decoded duration does not match the configured frame
 //! is rejected rather than widening a playback step.
 //!
+//! The codec is implemented with the pure-Rust `opus-pure` crate, so the build
+//! needs no C toolchain and no system libopus.
+//!
 //! [`FrameCodec`]: ovvc_media::loopback::FrameCodec
 //! [`JitterBuffer`]: ovvc_media::jitter::JitterBuffer
 
-use audiopus::coder::{Decoder, Encoder, GenericCtl};
-use audiopus::{Application, Bitrate, Channels, MutSignals, SampleRate};
+use opus_pure::{Application, OpusDecoder as PureDecoder, OpusEncoder as PureEncoder};
 use ovvc_media::loopback::FrameCodec;
 use ovvc_media::packet::MAX_MEDIA_PAYLOAD;
 use ovvc_media::{MediaError, Result as MediaResult};
@@ -27,9 +29,6 @@ use crate::error::{AudioError, Result};
 
 /// Samples per millisecond at the fixed 48 kHz rate.
 const SAMPLES_PER_MS: usize = 48;
-
-/// Opus's longest frame is 120 ms, which bounds any decoder output buffer.
-const MAX_DECODE_SAMPLES: usize = SAMPLES_PER_MS * 120;
 
 /// Opus packets are at most a few hundred bytes at voice bitrates. The buffer
 /// is deliberately larger than [`MAX_MEDIA_PAYLOAD`] so an unexpectedly large
@@ -44,7 +43,7 @@ const MAX_ENCODED_BYTES: usize = 4_000;
 /// [`OpusCodec`]: 48 kHz mono, 10, 20 or 40 ms frames, and an empty payload
 /// runs Opus loss concealment for exactly one frame.
 pub struct OpusDecoder {
-    decoder: Decoder,
+    decoder: PureDecoder,
     frame_ms: u16,
     frame_samples: usize,
 }
@@ -53,7 +52,7 @@ impl OpusDecoder {
     /// Build a 48 kHz mono decoder for the configured frame size.
     pub fn new(sample_rate: u32, frame_ms: u16) -> Result<Self> {
         validate_settings(sample_rate, frame_ms)?;
-        let decoder = Decoder::new(SampleRate::Hz48000, Channels::Mono).map_err(codec_error)?;
+        let decoder = PureDecoder::new(48_000, 1).map_err(codec_error)?;
         Ok(Self {
             decoder,
             frame_ms,
@@ -80,35 +79,27 @@ impl OpusDecoder {
             return self.decode_lost();
         }
 
-        let packet = audiopus::packet::Packet::try_from(payload).map_err(codec_error)?;
-        let mut samples = vec![0i16; MAX_DECODE_SAMPLES];
-        let written = {
-            let signals = MutSignals::try_from(samples.as_mut_slice()).map_err(codec_error)?;
-            self.decoder
-                .decode(Some(packet), signals, false)
-                .map_err(codec_error)?
-        };
+        let mut samples = vec![0i16; self.frame_samples];
+        let written = self
+            .decoder
+            .decode_s16(payload, self.frame_samples, &mut samples)
+            .map_err(codec_error)?;
         if written != self.frame_samples {
             return Err(AudioError::Codec(format!(
                 "packet decoded to {written} samples, expected {} for a {} ms frame",
                 self.frame_samples, self.frame_ms
             )));
         }
-        samples.truncate(written);
         Ok(samples)
     }
 
     /// Run Opus loss concealment for exactly one configured frame.
     pub fn decode_lost(&mut self) -> Result<Vec<i16>> {
-        // The concealment length comes from the output buffer, so it must be
-        // exactly one frame, not the 120 ms maximum.
         let mut samples = vec![0i16; self.frame_samples];
-        let written = {
-            let signals = MutSignals::try_from(samples.as_mut_slice()).map_err(codec_error)?;
-            self.decoder
-                .decode(None, signals, false)
-                .map_err(codec_error)?
-        };
+        let written = self
+            .decoder
+            .decode_s16(&[], self.frame_samples, &mut samples)
+            .map_err(codec_error)?;
         if written != self.frame_samples {
             return Err(AudioError::Codec(format!(
                 "concealment produced {written} samples, expected {} for a {} ms frame",
@@ -119,28 +110,13 @@ impl OpusDecoder {
     }
 }
 
-/// Reject the settings Opus cannot honour.
-fn validate_settings(sample_rate: u32, frame_ms: u16) -> Result<()> {
-    if sample_rate != 48_000 {
-        return Err(AudioError::Config(format!(
-            "Opus supports 48 kHz only, got {sample_rate} Hz"
-        )));
-    }
-    if !matches!(frame_ms, 10 | 20 | 40) {
-        return Err(AudioError::Config(format!(
-            "unsupported Opus frame size {frame_ms} ms, expected 10, 20 or 40"
-        )));
-    }
-    Ok(())
-}
-
 /// A stateful Opus encoder for one outgoing voice stream.
 ///
 /// The mesh engine owns one of these. A star hub owns one per listener,
 /// because each listener receives a different mix and Opus encoder state
 /// cannot be shared between streams.
 pub struct OpusEncoder {
-    encoder: Encoder,
+    encoder: PureEncoder,
     frame_ms: u16,
     frame_samples: usize,
 }
@@ -149,26 +125,10 @@ impl OpusEncoder {
     /// Build an encoder for 48 kHz mono at `bitrate_kbps`.
     pub fn new(sample_rate: u32, frame_ms: u16, bitrate_kbps: u16) -> Result<Self> {
         validate_settings(sample_rate, frame_ms)?;
-        if bitrate_kbps == 0 {
-            return Err(AudioError::Config(
-                "Opus bitrate must be greater than zero".to_string(),
-            ));
-        }
-        // 1200 bytes is 9600 bits, so the packets fit only while
-        // bitrate_kbps (bits per millisecond) times frame_ms is below that.
-        let max_bitrate_kbps = (MAX_MEDIA_PAYLOAD * 8) / usize::from(frame_ms);
-        if usize::from(bitrate_kbps) > max_bitrate_kbps {
-            return Err(AudioError::Config(format!(
-                "{bitrate_kbps} kbps at {frame_ms} ms can exceed the \
-                 {MAX_MEDIA_PAYLOAD}-byte media payload (at most {max_bitrate_kbps} kbps)"
-            )));
-        }
+        validate_bitrate(frame_ms, bitrate_kbps)?;
 
-        let mut encoder = Encoder::new(SampleRate::Hz48000, Channels::Mono, Application::Voip)
-            .map_err(codec_error)?;
-        encoder
-            .set_bitrate(Bitrate::BitsPerSecond(i32::from(bitrate_kbps) * 1_000))
-            .map_err(codec_error)?;
+        let mut encoder = PureEncoder::new(48_000, 1, Application::Voip).map_err(codec_error)?;
+        encoder.bitrate_bps = i32::from(bitrate_kbps) * 1_000;
 
         Ok(Self {
             encoder,
@@ -198,7 +158,10 @@ impl OpusEncoder {
         }
 
         let mut output = vec![0u8; MAX_ENCODED_BYTES];
-        let written = self.encoder.encode(pcm, &mut output).map_err(codec_error)?;
+        let written = self
+            .encoder
+            .encode_s16(pcm, self.frame_samples, &mut output)
+            .map_err(codec_error)?;
         if written == 0 {
             return Err(AudioError::Codec(
                 "Opus produced an empty packet".to_string(),
@@ -278,7 +241,41 @@ impl FrameCodec for OpusCodec {
     }
 }
 
-fn codec_error(err: audiopus::Error) -> AudioError {
+/// Reject the settings Opus cannot honour.
+fn validate_settings(sample_rate: u32, frame_ms: u16) -> Result<()> {
+    if sample_rate != 48_000 {
+        return Err(AudioError::Config(format!(
+            "Opus supports 48 kHz only, got {sample_rate} Hz"
+        )));
+    }
+    if !matches!(frame_ms, 10 | 20 | 40) {
+        return Err(AudioError::Config(format!(
+            "unsupported Opus frame size {frame_ms} ms, expected 10, 20 or 40"
+        )));
+    }
+    Ok(())
+}
+
+/// Reject a bitrate that cannot fit the media payload or means nothing.
+fn validate_bitrate(frame_ms: u16, bitrate_kbps: u16) -> Result<()> {
+    if bitrate_kbps == 0 {
+        return Err(AudioError::Config(
+            "Opus bitrate must be greater than zero".to_string(),
+        ));
+    }
+    // 1200 bytes is 9600 bits, so the packets fit only while
+    // bitrate_kbps (bits per millisecond) times frame_ms is below that.
+    let max_bitrate_kbps = (MAX_MEDIA_PAYLOAD * 8) / usize::from(frame_ms);
+    if usize::from(bitrate_kbps) > max_bitrate_kbps {
+        return Err(AudioError::Config(format!(
+            "{bitrate_kbps} kbps at {frame_ms} ms can exceed the \
+             {MAX_MEDIA_PAYLOAD}-byte media payload (at most {max_bitrate_kbps} kbps)"
+        )));
+    }
+    Ok(())
+}
+
+fn codec_error(err: opus_pure::Error) -> AudioError {
     AudioError::Codec(err.to_string())
 }
 
@@ -311,6 +308,20 @@ mod tests {
             .map(|&sample| f64::from(sample).powi(2))
             .sum();
         (sum / samples.len() as f64).sqrt() as f32
+    }
+
+    /// Encode one 120 ms frame with the raw crate API, bypassing this module's
+    /// 10/20/40 ms validation.
+    fn raw_120ms_packet() -> Vec<u8> {
+        let mut encoder =
+            PureEncoder::new(48_000, 1, Application::Voip).expect("encoder");
+        let long_frame = vec![0i16; SAMPLES_PER_MS * 120];
+        let mut output = vec![0u8; MAX_ENCODED_BYTES];
+        let written = encoder
+            .encode_s16(&long_frame, long_frame.len(), &mut output)
+            .expect("encode 120 ms");
+        output.truncate(written);
+        output
     }
 
     #[test]
@@ -371,14 +382,7 @@ mod tests {
     #[test]
     fn a_packet_longer_than_the_configured_frame_is_rejected() {
         let mut codec = OpusCodec::new(48_000, 20, 16).expect("codec");
-        let encoder =
-            Encoder::new(SampleRate::Hz48000, Channels::Mono, Application::Voip).expect("encoder");
-        let long_frame = vec![0i16; SAMPLES_PER_MS * 120];
-        let mut output = vec![0u8; MAX_ENCODED_BYTES];
-        let written = encoder
-            .encode(&long_frame, &mut output)
-            .expect("encode 120 ms");
-        output.truncate(written);
+        let output = raw_120ms_packet();
 
         assert!(
             matches!(codec.decode(&output), Err(AudioError::Codec(_))),
@@ -513,13 +517,7 @@ mod tests {
     #[test]
     fn a_standalone_decoder_rejects_a_packet_of_the_wrong_frame_length() {
         let mut decoder = OpusDecoder::new(48_000, 20).expect("decoder");
-        let encoder =
-            Encoder::new(SampleRate::Hz48000, Channels::Mono, Application::Voip).expect("encoder");
-        let mut output = vec![0u8; MAX_ENCODED_BYTES];
-        let written = encoder
-            .encode(&vec![0i16; SAMPLES_PER_MS * 120], &mut output)
-            .expect("encode 120 ms");
-        output.truncate(written);
+        let output = raw_120ms_packet();
 
         assert!(matches!(decoder.decode(&output), Err(AudioError::Codec(_))));
     }

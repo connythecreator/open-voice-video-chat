@@ -19,8 +19,9 @@ time.workspace = true
 toml.workspace = true
 tokio.workspace = true
 clap.workspace = true
-audiopus = "0.3.0-rc.0"
-audiopus_sys = { version = "0.2.2", features = ["static"] }
+# The pure-Rust Opus implementation. There is no C dependency, so the build
+# needs neither CMake, pkg-config nor the system libopus.
+opus-pure = "0.2.3"
 
 # PipeWire is a Linux-only API. Keeping the dependency out of the dependency
 # list on other targets means `--features pipewire` fails at the cfg in lib.rs

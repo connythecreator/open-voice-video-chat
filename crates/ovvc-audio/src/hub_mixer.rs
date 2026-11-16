@@ -843,26 +843,40 @@ mod tests {
         assert!(mixer.add_listener(LEAF_B).expect("listener b"));
 
         let [.., mut encoder_hub] = encoders();
-        let payload = encode(&mut encoder_hub, TONE_HUB);
-        assert_eq!(
-            mixer.receive(HUB, 0, payload).expect("receive hub"),
-            ReceiveOutcome::Accepted
-        );
+        // The first frame from a fresh Opus encoder and decoder is a
+        // transient, so measure a later frame. In a call both ends have been
+        // running for several frames before a listener is unmuted.
+        const WARMUP_FRAMES: u16 = 4;
+        let listeners = [LEAF_A, LEAF_B];
+        let mut decoders = [
+            OpusDecoder::new(48_000, 20).expect("decoder a"),
+            OpusDecoder::new(48_000, 20).expect("decoder b"),
+        ];
 
-        let frame = mixer.pump().expect("pump").expect("hub source");
-        assert!(
-            frame.local_playback.is_none(),
-            "the hub must not echo its own microphone into local playback"
-        );
-        for listener in [LEAF_A, LEAF_B] {
-            let frame_for = find_listener(&frame, listener).expect("hub voice reaches every leaf");
-            assert_eq!(frame_for.sources, 1);
-            let mut decoder = OpusDecoder::new(48_000, 20).expect("decoder");
-            let samples = decode(&mut decoder, &frame_for.payload);
-            assert!(
-                tone_energy(&samples, TONE_HUB) > 1_000.0,
-                "listener {listener:?} did not hear the hub"
+        for seq in 0..=WARMUP_FRAMES {
+            let payload = encode(&mut encoder_hub, TONE_HUB);
+            assert_eq!(
+                mixer.receive(HUB, seq, payload).expect("receive hub"),
+                ReceiveOutcome::Accepted
             );
+
+            let frame = mixer.pump().expect("pump").expect("hub source");
+            assert!(
+                frame.local_playback.is_none(),
+                "the hub must not echo its own microphone into local playback"
+            );
+            for (index, listener) in listeners.iter().enumerate() {
+                let frame_for =
+                    find_listener(&frame, *listener).expect("hub voice reaches every leaf");
+                assert_eq!(frame_for.sources, 1);
+                let samples = decode(&mut decoders[index], &frame_for.payload);
+                if seq == WARMUP_FRAMES {
+                    assert!(
+                        tone_energy(&samples, TONE_HUB) > 1_000.0,
+                        "listener {listener:?} did not hear the hub"
+                    );
+                }
+            }
         }
     }
 
