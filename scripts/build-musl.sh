@@ -1,18 +1,10 @@
 #!/usr/bin/env bash
-# Build the headless ovvc binaries for a static musl target.
+# Build the headless binaries as static musl.
 #
-# The GUI is deliberately excluded. A static musl GUI would need static X11,
-# Wayland and Vulkan libraries, which this project does not support. The
-# daemon, CLI, TUI and relay server do not need those and can link statically.
+# Needs a musl C compiler for ring's C and assembly. Debian or Ubuntu:
+# musl-tools. Alpine: build-base. Arch: musl. The GUI is excluded because it
+# loads X11, Wayland and Vulkan at runtime.
 #
-# Opus is built from source with the musl C compiler. Without
-# LIBOPUS_NO_PKG=1, audiopus_sys probes the host pkg-config, finds the glibc
-# opus.pc, and emits a plain -lopus that a static musl link cannot use.
-#
-# Debian or Ubuntu needs musl-tools. Alpine is already musl, so its build-base
-# package provides the compiler. The Rust musl target is installed if missing.
-#
-# Usage:
 #   scripts/build-musl.sh
 #   OVVC_MUSL_TARGET=aarch64-unknown-linux-musl scripts/build-musl.sh
 #   MUSL_CC=x86_64-linux-musl-gcc scripts/build-musl.sh
@@ -31,9 +23,9 @@ if [ -z "$linker" ]; then
         linker=cc
     else
         echo "error: no musl C compiler found" >&2
-        echo "  Debian or Ubuntu: sudo apt-get install musl-tools cmake" >&2
-        echo "  Alpine: apk add bash build-base cmake pkgconf" >&2
-        echo "  Arch: sudo pacman -S musl cmake" >&2
+        echo "  Debian or Ubuntu: sudo apt-get install musl-tools" >&2
+        echo "  Alpine: apk add bash build-base" >&2
+        echo "  Arch: sudo pacman -S musl" >&2
         echo "  or set MUSL_CC to the musl compiler" >&2
         exit 1
     fi
@@ -41,11 +33,6 @@ fi
 
 if ! command -v "$linker" >/dev/null 2>&1; then
     echo "error: $linker not found; check MUSL_CC" >&2
-    exit 1
-fi
-
-if ! command -v cmake >/dev/null 2>&1; then
-    echo "error: cmake not found; audiopus_sys needs it to build libopus" >&2
     exit 1
 fi
 
@@ -61,14 +48,13 @@ fi
 
 target_cc="CC_${target//-/_}"
 
-export LIBOPUS_NO_PKG=1
-export OPUS_STATIC=1
 export CC="$linker"
 export "$target_cc=$linker"
 # Pin static linking. Do not set the Rust linker to musl-gcc: rustc's default
 # cc driver with the bundled musl crt and libc.a produces a static-pie binary,
 # while Debian's musl-gcc spec can turn the same link into a dynamic one. The
-# musl compiler is only needed for C dependencies such as libopus.
+# musl compiler is only needed for C and assembly in dependencies such as ring
+# and wayland-backend.
 export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=+crt-static"
 
 echo "building headless binaries for $target with $linker" >&2

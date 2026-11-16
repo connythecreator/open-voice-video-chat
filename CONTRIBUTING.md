@@ -20,20 +20,18 @@ By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Build and test
 
-The workspace needs Rust 1.95 or newer. The GUI also needs the Linux
-development libraries listed in the [README](README.md), and the live audio
-backend needs the PipeWire headers.
+The workspace needs Rust 1.95+, a C compiler for `ring`, and the GUI libraries
+from the [README](README.md). CMake and pkg-config are only needed for live
+audio.
 
 ```sh
 cargo build --workspace
 cargo test --workspace
 ```
 
-For a static musl build of the headless binaries, install `musl-tools` and
-`cmake` on Debian or Ubuntu, or `musl` and `cmake` on Arch, then run
-`scripts/build-musl.sh`. The GUI has a separate dynamic musl target built on
-Alpine with `scripts/build-musl-gui.sh`. The GUI cannot be static musl, because
-the window stack loads X11, Wayland, xkbcommon and Vulkan with `dlopen`.
+Static musl: install `musl-tools` (`musl` on Arch) and run
+`scripts/build-musl.sh`. The GUI uses `scripts/build-musl-gui.sh` on Alpine and
+cannot be static musl.
 
 The daemon tests start real processes and real libp2p links. Some suites are
 clearer with one test thread:

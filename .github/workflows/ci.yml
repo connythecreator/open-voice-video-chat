@@ -33,7 +33,6 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential \
             ca-certificates \
-            cmake \
             pkg-config \
             libx11-dev \
             libxcursor-dev \
@@ -109,7 +108,6 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential \
             ca-certificates \
-            cmake \
             pkg-config \
             libx11-dev \
             libxcursor-dev \
@@ -145,9 +143,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential \
             ca-certificates \
-            musl-tools \
-            cmake \
-            pkg-config
+            musl-tools
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -180,6 +176,6 @@ jobs:
       - name: Build in Alpine
         run: |
           docker run --rm -v "$PWD:/src" -w /src rust:1.100.0-alpine sh -c '
-            apk add --no-cache bash build-base cmake file &&
+            apk add --no-cache bash build-base file &&
             scripts/build-musl-gui.sh &&
             file target/x86_64-unknown-linux-musl/release/ovvc-gui'

@@ -2,8 +2,8 @@
 
 //! Fuzzes Opus decoding and the engine's receive/playback path.
 //!
-//! Arbitrary bytes go straight to [`OpusCodec::decode`], so the libopus FFI
-//! wrapper is exercised with corrupt and truncated packets. When the payload
+//! Arbitrary bytes go straight to [`OpusCodec::decode`], so the pure-Rust Opus
+//! decoder is exercised with corrupt and truncated packets. When the payload
 //! fits a media packet it is also offered to [`AudioEngine::receive`] and
 //! played, which must never panic and must never emit more than one configured
 //! frame. This covers the decoder state, the jitter buffer and the concealment

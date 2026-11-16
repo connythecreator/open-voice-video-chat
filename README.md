@@ -79,30 +79,21 @@ the policy view is read-only.
 
 ## Prerequisites
 
-* **Rust 1.95 or newer.** That is the real workspace floor because the locked
-  egui 0.37 and eframe 0.37 stack requires it. Install with
-  [rustup](https://rustup.rs/).
-* **A C toolchain, CMake and pkg-config.** `audiopus_sys` builds libopus from
-  source.
-* **Linux GUI development libraries** for the desktop client. On Debian or
-  Ubuntu:
+* **Rust 1.95 or newer.** Install with [rustup](https://rustup.rs/).
+* **A C compiler** for `ring` (WebRTC and libp2p). CMake and pkg-config are
+  not required.
+* **Linux GUI libraries** on Debian or Ubuntu:
 
   ```sh
-  sudo apt-get install build-essential cmake pkg-config \
+  sudo apt-get install build-essential \
     libx11-dev libxcursor-dev libxi-dev libxrandr-dev libxkbcommon-dev \
     libwayland-dev libegl1-mesa-dev libgl1-mesa-dev libvulkan-dev
   ```
 
-* **A Vulkan driver** for the GUI tests. The software rasteriser is enough:
-
-  ```sh
-  sudo apt-get install mesa-vulkan-drivers
-  ```
-
-* **PipeWire development headers** only if you want the live audio backend.
-  `scripts/audio-dev-env.sh` stages them under `target/` without root, or
-  install `libpipewire-0.3-dev` and `libspa-0.2-dev` with your package
-  manager.
+* **A Vulkan driver** for the GUI tests:
+  `sudo apt-get install mesa-vulkan-drivers`.
+* **PipeWire headers and pkg-config** only for live audio.
+  `scripts/audio-dev-env.sh` stages them without root.
 
 ## Build
 
@@ -120,47 +111,40 @@ The binaries land in `target/release`:
 | `ovvc-daemon` | Local store, IPC server and network node |
 | `ovvc-server` | Optional libp2p relay |
 
-The default build uses the silent null audio backend. Build the daemon with
-the live PipeWire backend when the headers are staged:
+The default build uses the null audio backend. For live PipeWire audio:
 
 ```sh
 source scripts/audio-dev-env.sh
 cargo build --release -p ovvc-daemon --features pipewire
 ```
 
-### Static musl build (headless)
-
-The daemon, CLI, TUI and relay server can be built statically for
-`x86_64-unknown-linux-musl`. Install the musl C toolchain first, then run the
-script:
+### Static musl (headless)
 
 ```sh
-sudo apt-get install musl-tools cmake
+sudo apt-get install musl-tools
 scripts/build-musl.sh
 ```
 
-The script installs the Rust target when missing, sets the musl compiler, and
-sets `LIBOPUS_NO_PKG=1` so `audiopus_sys` builds Opus from source for musl
-instead of taking a glibc `opus.pc` from the host. On Arch, install `musl` and
-`cmake` instead of `musl-tools`. The GUI is not part of this target, because a
-static musl GUI cannot load its window libraries.
+Builds `ovvc`, `ovvc-tui`, `ovvc-daemon` and `ovvc-server` as static PIE for
+`x86_64-unknown-linux-musl`. A musl C compiler is needed for `ring`. On Arch,
+install `musl`. The GUI is excluded because it loads X11, Wayland and Vulkan at
+runtime.
 
-### Musl GUI build (Alpine)
+### musl GUI (Alpine)
 
-A static musl GUI cannot work. The window stack loads X11, Wayland, xkbcommon
-and Vulkan with `dlopen`, and a static musl binary has no dynamic loader, so
-`dlopen` fails with `Dynamic loading not supported`. Build the GUI as a
-dynamically linked musl binary for a musl userland such as Alpine:
+A static musl GUI cannot work: it loads X11, Wayland and Vulkan with `dlopen`,
+and a static musl binary has no dynamic loader. Build a dynamic musl binary on
+a musl userland:
 
 ```sh
 docker run --rm -v "$PWD:/src" -w /src rust:1.100.0-alpine sh -c '
-  apk add --no-cache bash build-base cmake &&
+  apk add --no-cache bash build-base &&
   scripts/build-musl-gui.sh'
 ```
 
-The binary needs X11 or Wayland, `libxkbcommon` and a Vulkan driver on the
-machine that runs it. It does not run on a glibc desktop. On a glibc desktop,
-build the normal GUI with `cargo build --release -p ovvc-gui` instead.
+It runs on Alpine with X11 or Wayland, `libxkbcommon` and a Vulkan driver. It
+does not run on glibc; build the normal GUI there with
+`cargo build --release -p ovvc-gui`.
 
 ## Run
 
