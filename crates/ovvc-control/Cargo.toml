@@ -1,0 +1,23 @@
+[package]
+name = "ovvc-control"
+description = "Ephemeral, signed ovvc-c control protocol and media election"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[dependencies]
+ovvc-core = { path = "../ovvc-core" }
+ovvc-media = { path = "../ovvc-media" }
+blake3.workspace = true
+postcard.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+time.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

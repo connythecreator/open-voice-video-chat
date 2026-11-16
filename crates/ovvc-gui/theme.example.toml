@@ -1,0 +1,54 @@
+# ovvc terminal theme.
+#
+# Copy this file to the per-user config directory as `theme.toml`:
+#
+#   mkdir -p ~/.config/ovvc
+#   cp crates/ovvc-gui/theme.example.toml ~/.config/ovvc/theme.toml
+#
+# `OVVC_THEME=/path/to/file.toml` overrides the location. Missing sections and
+# keys fall back to the built-in palette, but unknown keys and bad colours are
+# reported at startup and the built-in theme is used instead.
+
+[colors]
+background = "#080c09"
+panel = "#0c110d"
+chat = "#090e0a"
+input = "#050906"
+hover = "#152419"
+border = "#223a28"
+accent = "#5cff8a"
+accent_dim = "#1c4d2d"
+text = "#b8d4bc"
+bright = "#e0ffe6"
+muted = "#748f7a"
+faint = "#4b6350"
+green = "#5cff8a"
+yellow = "#ffc257"
+red = "#ff6b6b"
+cyan = "#6ce6f2"
+magenta = "#d88be8"
+blue = "#7cb8ff"
+code = "#111c14"
+selection_background = "#5cff8a"
+selection_foreground = "#080c09"
+
+[fonts]
+heading = 16.0
+body = 14.5
+monospace = 14.0
+button = 13.0
+small = 11.5
+# Edge length of the generated message avatars, in points (16..=96).
+avatar = 40.0
+
+# Speakers are coloured by a hash of their author id, cycling through this
+# list. Add as many colours as you like.
+[authors]
+colors = [
+    "#5cff8a",
+    "#6ce6f2",
+    "#ffc257",
+    "#d88be8",
+    "#7cb8ff",
+    "#b8d4bc",
+]

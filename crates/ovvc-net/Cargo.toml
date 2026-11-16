@@ -1,0 +1,44 @@
+[package]
+name = "ovvc-net"
+description = "Direct libp2p networking for ovvc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+futures = "0.3"
+libp2p = { version = "0.56", features = [
+    "tokio",
+    "tcp",
+    "dns",
+    "noise",
+    "yamux",
+    "mdns",
+    "identify",
+    "ping",
+    "request-response",
+    "cbor",
+    "kad",
+    "macros",
+    "ed25519",
+    "upnp",
+    "relay",
+    "dcutr",
+] }
+natpmp = "0.5"
+ovvc-control = { path = "../ovvc-control" }
+ovvc-core = { path = "../ovvc-core" }
+ovvc-media = { path = "../ovvc-media" }
+postcard.workspace = true
+serde.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+
+[dev-dependencies]
+ovvc-store = { path = "../ovvc-store" }
+tempfile.workspace = true

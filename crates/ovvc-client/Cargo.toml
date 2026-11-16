@@ -1,0 +1,31 @@
+[package]
+name = "ovvc-client"
+description = "Frontend-facing client facade for ovvc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[features]
+default = ["store"]
+# The bundled redb-backed backend. Disable it to build a client that carries
+# no storage implementation of its own and uses only `StorageConfig::Custom`.
+store = ["dep:ovvc-store"]
+
+[dependencies]
+anyhow.workspace = true
+ovvc-control = { path = "../ovvc-control" }
+ovvc-core = { path = "../ovvc-core" }
+ovvc-media = { path = "../ovvc-media" }
+ovvc-net = { path = "../ovvc-net" }
+ovvc-store = { path = "../ovvc-store", optional = true }
+thiserror.workspace = true
+tokio = { version = "1", features = ["rt", "sync", "time"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }

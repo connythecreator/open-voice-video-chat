@@ -1,0 +1,109 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/ovvc-core",
+    "crates/ovvc-crypto",
+    "crates/ovvc-config",
+    "crates/ovvc-store",
+    "crates/ovvc-net",
+    "crates/ovvc-client",
+    "crates/ovvc-control",
+    "crates/ovvc-media",
+    "crates/ovvc-audio",
+    "crates/ovvc-rtc",
+    "crates/ovvc-ipc",
+    "crates/ovvc-remote",
+    "crates/ovvc-theme",
+    "crates/ovvc-daemon",
+    "crates/ovvc-tui",
+    "crates/ovvc-cli",
+    "crates/ovvc-server",
+    "crates/ovvc-gui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/connythecreator/open-voice-video-chat"
+homepage = "https://github.com/connythecreator/open-voice-video-chat"
+# The locked egui 0.37 and eframe 0.37 stack requires rustc 1.95, so that is
+# the real floor for the workspace, not the 1.85 floor of edition 2024.
+rust-version = "1.95"
+readme = "README.md"
+keywords = ["chat", "p2p", "libp2p", "voice", "serverless"]
+categories = ["network-programming", "cryptography", "multimedia::audio"]
+# No crate is published to crates.io yet. Remove this per crate when a
+# deliberate crate release happens.
+publish = false
+
+# Debug builds spend most of their time in cryptography and compression. Build
+# those dependencies optimised even in dev/test profiles: a 600-event history
+# otherwise takes tens of seconds to verify. Debug info for our own crates (and
+# stepping through them) is unaffected.
+[profile.dev.package.ed25519-dalek]
+opt-level = 3
+
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.dev.package.blake3]
+opt-level = 3
+
+[profile.dev.package.postcard]
+opt-level = 3
+
+# Disk is the scarce resource on the development machine. Full DWARF for every
+# dependency, and for every generic the dependencies monomorphise into our
+# crates, made target/debug/deps exceed 50 GB; the GUI and daemon binaries were
+# 350 MB each. Line tables for our own crates keep readable backtraces and
+# source stepping in ovvc code, while dropping debug info for dependencies is
+# barely noticeable when stepping through libp2p or egui.
+#
+# Incremental compilation is disabled for the same reason: its cache had grown
+# to 23 GB and is rebuilt from scratch after a profile change anyway. A cold
+# build is slightly slower, a rebuild is not much worse than an incremental
+# one at this workspace size, and the cache no longer silently fills the disk.
+[profile.dev]
+debug = "line-tables-only"
+incremental = false
+
+[profile.dev.package."*"]
+debug = false
+
+# Release binaries ship to users, so strip the symbol table and let thin LTO
+# remove code that monomorphisation left behind. Fat LTO builds this workspace
+# too slowly to be worth the last few hundred kilobytes.
+[profile.release]
+strip = "symbols"
+lto = "thin"
+
+[workspace.dependencies]
+anyhow = "1"
+base64 = "0.22"
+blake3 = "1"
+chacha20poly1305 = "0.10"
+clap = { version = "4", features = ["derive", "env"] }
+directories = "6"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+hex = "0.4"
+postcard = { version = "1", features = ["alloc"] }
+rand = "0.8"
+redb = "4.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+thiserror = "2"
+time = { version = "0.3", features = ["formatting", "macros"] }
+toml = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net", "io-util", "signal", "process", "fs"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+zeroize = "1"
+libc = "0.2"
+ksni = "0.3.7"
+notify-rust = "4.19"
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "wgpu", "wayland", "x11"] }
+egui = "0.37"

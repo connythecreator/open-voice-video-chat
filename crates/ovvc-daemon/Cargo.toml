@@ -1,0 +1,57 @@
+[package]
+name = "ovvc-daemon"
+description = "Local daemon that owns ovvc storage and networking for thin clients"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "ovvc-daemon"
+path = "src/main.rs"
+
+[features]
+# Desktop notifications are runtime opt-in (`--notify`); the tray is on by
+# default through `daemon.tray`, and the `--tray` flag only forces it on. The
+# features decide whether the binaries are linked at all. Build with
+# `--no-default-features` for a lean daemon that never touches DBus.
+default = ["notify", "tray"]
+# The live audio device backend. Build with `--features pipewire` after
+# `source scripts/audio-dev-env.sh`. Without it the daemon uses the silent
+# null backend and a voice call has no live microphone or speaker.
+pipewire = ["ovvc-audio/pipewire"]
+# Desktop notifications through the freedesktop notification service.
+notify = ["dep:notify-rust"]
+# StatusNotifierItem system tray icon (KDE/freedesktop).
+tray = ["dep:ksni"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+directories.workspace = true
+ksni = { workspace = true, optional = true }
+notify-rust = { workspace = true, optional = true }
+ovvc-audio = { path = "../ovvc-audio" }
+ovvc-client = { path = "../ovvc-client" }
+ovvc-config = { path = "../ovvc-config" }
+ovvc-control = { path = "../ovvc-control" }
+ovvc-core = { path = "../ovvc-core" }
+ovvc-crypto = { path = "../ovvc-crypto" }
+ovvc-ipc = { path = "../ovvc-ipc" }
+ovvc-media = { path = "../ovvc-media" }
+ovvc-rtc = { path = "../ovvc-rtc" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio = { workspace = true }
+
+[dev-dependencies]
+egui.workspace = true
+ovvc-gui = { path = "../ovvc-gui", default-features = false, features = ["ui"] }
+ovvc-remote = { path = "../ovvc-remote" }
+tempfile.workspace = true

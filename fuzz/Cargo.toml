@@ -1,0 +1,78 @@
+[package]
+name = "ovvc-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+egui = "0.37"
+libfuzzer-sys = "0.4"
+ovvc-audio = { path = "../crates/ovvc-audio" }
+ovvc-core = { path = "../crates/ovvc-core" }
+ovvc-gui = { path = "../crates/ovvc-gui", default-features = false, features = ["ui"] }
+ovvc-ipc = { path = "../crates/ovvc-ipc" }
+ovvc-media = { path = "../crates/ovvc-media" }
+ovvc-net = { path = "../crates/ovvc-net" }
+ovvc-store = { path = "../crates/ovvc-store" }
+tempfile = "3"
+
+[[bin]]
+name = "fuzz_event"
+path = "fuzz_targets/fuzz_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_invite"
+path = "fuzz_targets/fuzz_invite.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_announcement"
+path = "fuzz_targets/fuzz_announcement.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_store_open"
+path = "fuzz_targets/fuzz_store_open.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_gui"
+path = "fuzz_targets/fuzz_gui.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_media_packet"
+path = "fuzz_targets/fuzz_media_packet.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_audio_loopback"
+path = "fuzz_targets/fuzz_audio_loopback.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_audio_decode"
+path = "fuzz_targets/fuzz_audio_decode.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

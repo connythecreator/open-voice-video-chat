@@ -1,0 +1,47 @@
+[package]
+name = "ovvc-gui"
+description = "egui desktop client for ovvc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[lib]
+name = "ovvc_gui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ovvc-gui"
+path = "src/main.rs"
+
+[features]
+default = ["desktop"]
+# egui rendering, the theme and the async bridge. No windowing system needed,
+# so the headless render tests and the render fuzzer can build this alone.
+ui = ["dep:egui"]
+# The eframe application shell on top of `ui`.
+desktop = ["ui", "dep:eframe", "dep:image"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+directories.workspace = true
+eframe = { workspace = true, optional = true }
+egui = { workspace = true, optional = true }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
+ovvc-control = { path = "../ovvc-control" }
+ovvc-config = { path = "../ovvc-config" }
+ovvc-core = { path = "../ovvc-core" }
+ovvc-ipc = { path = "../ovvc-ipc" }
+ovvc-theme = { path = "../ovvc-theme" }
+time.workspace = true
+tokio = { workspace = true }
+
+[dev-dependencies]
+egui_kittest = { version = "0.37.0", features = ["wgpu"] }
+ovvc-media = { path = "../ovvc-media" }
+tempfile.workspace = true

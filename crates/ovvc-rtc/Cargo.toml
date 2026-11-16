@@ -1,0 +1,32 @@
+[package]
+name = "ovvc-rtc"
+description = "WebRTC audio transport for ovvc voice calls"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[dependencies]
+ovvc-core = { path = "../ovvc-core" }
+ovvc-crypto = { path = "../ovvc-crypto" }
+ovvc-media = { path = "../ovvc-media" }
+webrtc = "0.21.1"
+# `webrtc` re-exports the PeerConnection handle but not the RTP codec and
+# media-sample types needed to build a local track, nor the `bytes::Bytes`
+# backing `Sample::data`. The spike proved both direct dependencies are
+# required; the webrtc examples depend on `rtc` directly for the same reason.
+rtc = "0.21.1"
+bytes = "1"
+tokio = { workspace = true, features = ["rt-multi-thread", "sync", "time", "macros"] }
+async-trait = "0.1"
+serde.workspace = true
+thiserror.workspace = true
+time.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true

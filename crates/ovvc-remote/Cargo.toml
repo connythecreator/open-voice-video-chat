@@ -1,0 +1,19 @@
+[package]
+name = "ovvc-remote"
+description = "Daemon-attached client shared by the ovvc frontends"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+ovvc-client = { path = "../ovvc-client" }
+ovvc-control = { path = "../ovvc-control" }
+ovvc-core = { path = "../ovvc-core" }
+ovvc-ipc = { path = "../ovvc-ipc" }
+tokio = { workspace = true }
