@@ -129,3 +129,57 @@ jobs:
 
       - name: Check on the minimum version
         run: cargo check --workspace --locked
+
+  musl:
+    name: Headless static musl build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            musl-tools \
+            cmake \
+            pkg-config
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: musl
+
+      - name: Build headless binaries
+        run: scripts/build-musl.sh
+
+      - name: Verify static binaries
+        run: |
+          bin=target/x86_64-unknown-linux-musl/release
+          file "$bin/ovvc" "$bin/ovvc-daemon" "$bin/ovvc-tui" "$bin/ovvc-server"
+          OVVC_DATA_DIR="$RUNNER_TEMP/ovvc-data" "$bin/ovvc" --version
+
+  musl-gui:
+    name: Alpine musl GUI build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build in Alpine
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src rust:1.100.0-alpine sh -c '
+            apk add --no-cache bash build-base cmake file &&
+            scripts/build-musl-gui.sh &&
+            file target/x86_64-unknown-linux-musl/release/ovvc-gui'

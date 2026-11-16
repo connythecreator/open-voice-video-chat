@@ -128,6 +128,40 @@ source scripts/audio-dev-env.sh
 cargo build --release -p ovvc-daemon --features pipewire
 ```
 
+### Static musl build (headless)
+
+The daemon, CLI, TUI and relay server can be built statically for
+`x86_64-unknown-linux-musl`. Install the musl C toolchain first, then run the
+script:
+
+```sh
+sudo apt-get install musl-tools cmake
+scripts/build-musl.sh
+```
+
+The script installs the Rust target when missing, sets the musl compiler, and
+sets `LIBOPUS_NO_PKG=1` so `audiopus_sys` builds Opus from source for musl
+instead of taking a glibc `opus.pc` from the host. On Arch, install `musl` and
+`cmake` instead of `musl-tools`. The GUI is not part of this target, because a
+static musl GUI cannot load its window libraries.
+
+### Musl GUI build (Alpine)
+
+A static musl GUI cannot work. The window stack loads X11, Wayland, xkbcommon
+and Vulkan with `dlopen`, and a static musl binary has no dynamic loader, so
+`dlopen` fails with `Dynamic loading not supported`. Build the GUI as a
+dynamically linked musl binary for a musl userland such as Alpine:
+
+```sh
+docker run --rm -v "$PWD:/src" -w /src rust:1.100.0-alpine sh -c '
+  apk add --no-cache bash build-base cmake &&
+  scripts/build-musl-gui.sh'
+```
+
+The binary needs X11 or Wayland, `libxkbcommon` and a Vulkan driver on the
+machine that runs it. It does not run on a glibc desktop. On a glibc desktop,
+build the normal GUI with `cargo build --release -p ovvc-gui` instead.
+
 ## Run
 
 The desktop client starts its own daemon, so this is the shortest path:

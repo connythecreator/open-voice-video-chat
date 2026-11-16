@@ -29,6 +29,12 @@ cargo build --workspace
 cargo test --workspace
 ```
 
+For a static musl build of the headless binaries, install `musl-tools` and
+`cmake` on Debian or Ubuntu, or `musl` and `cmake` on Arch, then run
+`scripts/build-musl.sh`. The GUI has a separate dynamic musl target built on
+Alpine with `scripts/build-musl-gui.sh`. The GUI cannot be static musl, because
+the window stack loads X11, Wayland, xkbcommon and Vulkan with `dlopen`.
+
 The daemon tests start real processes and real libp2p links. Some suites are
 clearer with one test thread:
 
